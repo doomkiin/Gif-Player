@@ -67,8 +67,8 @@ class AnimatedGIF(tk.Label):
         self.timer_id = self.after(delay, self.next_frame)
 
     def change_gif(self, new_path):
-        #stop and load up new path
-        self.stop()
+        #load up new path
+        #self.stop()
         self.gif_path = new_path
 
         #clear out frames and durations so they aren't just appended on
@@ -77,7 +77,7 @@ class AnimatedGIF(tk.Label):
 
         #load the frames and durations into their appropirate lists and start
         self._load_gif()
-        self.start()
+        #self.start()
 
     def start(self):
         """Start playing the animation."""
@@ -99,12 +99,12 @@ root = tk.Tk()
 root.title("PIL + Tkinter GIF Player")
 root.geometry("400x400")
 
-gif_label = AnimatedGIF(root, gif_path="Gifs/sample.gif", resize=(300, 300))
+gif_label = AnimatedGIF(root, gif_path="Gifs/hug.gif", resize=(300, 300))
 gif_label.pack(expand=True, fill="both", padx=20, pady=20)
 
 
 
 if input() == "change":
-    gif_label.change_gif("Gifs/sample2.gif")
+    gif_label.change_gif("Gifs/ZeroTwo.gif")
 
 root.mainloop()
