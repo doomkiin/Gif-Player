@@ -1,0 +1,10 @@
+Known bugs:
+-There is a delay when you change gifs
+
+Future version additions:
+-A drop down menu from above that will have buttons to change how gifs are played
+    -load gif playlist by folder button
+    -loop current gif button
+    -Display current gif name label
+-Drop down menu
+    -pause, play, next, and reverse buttons

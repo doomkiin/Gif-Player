@@ -1,0 +1,13 @@
+# Virtual Environment
+.venv/
+
+# Optional Media
+Gifs/
+
+# Python cache & temporary files
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.pytest_cache/
+.env
