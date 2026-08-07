@@ -1,39 +1,41 @@
 import tkinter as tk
 from PIL import Image, ImageTk, ImageSequence
+from pathlib import Path
+
+
+"""
+While loops are illegal: While loops inside root.mainloop() will cause the window to pause for the length of the while loop.
+"""
 
 class AnimatedGIF(tk.Label):
-    def __init__(self, master, gif_path, resize=None, *args, **kwargs):
+    def __init__(self, master, gif_paths: list[str], resize=None, *args, **kwargs):
         #Passing additional tk.Label class argumets up to parent and declaring parameters into variables
         super().__init__(master, *args, **kwargs)
-        self.gif_path = gif_path
-        self.resize = resize
 
-        #Lists to store gif data to reduce constant processing on gif loops, and call private method
         self.frames = []
         self.durations = []
-        self._load_gif()
+        self.playlist = gif_paths
+        self.resize = resize
 
         #animation playback state tracking and timer variables
+        self.path_gen = None
         self.current_frame = 0
         self.is_running = False
         self.timer_id = None
-        
-        # Display the first frame immediately and call start method
-        if self.frames: #insures list isn't empty, corruption check, this can probably be removed since error handlings happens in _load_gif
-            self.config(image=self.frames[0])
-            self.start()
 
-    def _load_gif(self):
+    def _load_gif(self, path):
         """Extract frames and frame durations using Pillow."""
+        self.frames.clear()
+        self.durations.clear()
         try:
-            with Image.open(self.gif_path) as img:
+            with Image.open(path) as img:
                 for frame in ImageSequence.Iterator(img):
                     # Convert to RGBA to preserve color accuracy and transparency
                     converted_frame = frame.convert("RGBA")
 
                     #Checks to see if resize is anything other than None
-                    if self.resize:#Image.Resampling.LANCZOS is a high-quality downsampling/upsampling algorithm
-                        converted_frame = converted_frame.resize(self.resize, Image.Resampling.LANCZOS)
+                    #if self.resize:
+                    converted_frame = converted_frame.resize(self.resize, Image.Resampling.LANCZOS)#<- high-quality downsampling/upsampling algorithm
                     
                     # Convert Pillow frame to Tkinter-compatible PhotoImage and append to frames list
                     photo = ImageTk.PhotoImage(converted_frame)
@@ -43,68 +45,86 @@ class AnimatedGIF(tk.Label):
                     duration = frame.info.get("duration", 100)
                     # Fallback for broken metadata (0ms duration)
                     self.durations.append(duration if duration > 0 else 100)
+
         except Exception as e:
             print(f"Error loading GIF or frame corrupted: {e}")
             #If corruption caused partial loading, clear out broken frame data
-            self.frames.clear()
-            self.durations.clear()
+            #!!!Implement some logic to display the gif name that is at fault.
+        
+        self.next_frame()
+
+    def _path_generator(self):
+        for path in self.playlist:
+            yield str(path)
+
+    def _load_next_gif(self):
+        """Pull the next path from the persistent generator."""
+        # Create generator if it doesn't exist yet
+        if self.path_gen is None:
+            self.path_gen = self._path_generator()
+
+        try:
+            next_path = next(self.path_gen)
+        except StopIteration:
+            # Playlist finished: recreate generator to loop back to the first GIF
+            self.path_gen = self._path_generator()
+            next_path = next(self.path_gen)
+
+        self.current_frame = 0
+        self._load_gif(next_path)
 
     #animation "engine" | tkinter event schedular loop
     def next_frame(self):
+
         #Start and stop switch check, the loop will stop if ever self.is_running is ever False
-        if not self.is_running:
+        if not self.is_running or not self.frames:
             return
     
-        '''
-        If (self.current_frame + 1) > len(self.frames) then self.current_frame = (self.current_frame + 1)
-        If (self.current_frame + 1) = len(self.frames) then self.current_frame will equal 0
-        '''#Core loop logic
-        self.current_frame = (self.current_frame + 1) % len(self.frames)
-        self.config(image=self.frames[self.current_frame])
-        
-        # Schedule next frame update based on individual frame delay
-        delay = self.durations[self.current_frame]
-        self.timer_id = self.after(delay, self.next_frame)
+        # Advance frame counter
+        self.current_frame += 1
 
-    def change_gif(self, new_path):
-        #load up new path
-        #self.stop()
-        self.gif_path = new_path
+        # LATCH CONDITION: Reached end of current GIF -> load next GIF
+        if self.current_frame >= len(self.frames):
+            self._load_next_gif()
+        else:
+            # Render current frame
+            self.config(image=self.frames[self.current_frame])
+            delay = self.durations[self.current_frame]
 
-        #clear out frames and durations so they aren't just appended on
-        self.frames.clear()
-        self.durations.clear()
-
-        #load the frames and durations into their appropirate lists and start
-        self._load_gif()
-        #self.start()
+            # Schedule next frame timer
+            self.timer_id = self.after(delay, self.next_frame)
 
     def start(self):
         """Start playing the animation."""
         if not self.is_running:
-            #ensure there are no latent background timers caused by after()
-            if self.timer_id:
-                self.after_cancel(self.timer_id)
-                self.timer_id = None
-
             self.is_running = True
-            self.next_frame()
+        
+        #ensure there are no latent background timers caused by after()
+        if self.timer_id:
+            self.after_cancel(self.timer_id)
+            self.timer_id = None
+
+        self._load_next_gif()
 
     def stop(self):
         """Pause the animation."""
         self.is_running = False
+        if self.timer_id:
+            self.after_cancel(self.timer_id)
+            self.timer_id = None
+
+#Controle loop: _list_loop > _plath_generator > change_gif > _load_gif > start > next_frame
 
 #initialize tkinter window
 root = tk.Tk()
 root.title("PIL + Tkinter GIF Player")
 root.geometry("400x400")
 
-gif_label = AnimatedGIF(root, gif_path="Gifs/hug.gif", resize=(300, 300))
+#gif label
+playlist = [str(file.resolve()) for file in Path('/home/redacted/Documents/Python/Projects/Gif-Player/Gifs').rglob('*') if file.is_file()]
+print(*playlist, sep="\n")
+gif_label = AnimatedGIF(root, gif_paths=playlist, resize=(300, 300))
 gif_label.pack(expand=True, fill="both", padx=20, pady=20)
-
-
-
-if input() == "change":
-    gif_label.change_gif("Gifs/ZeroTwo.gif")
+gif_label.start()
 
 root.mainloop()

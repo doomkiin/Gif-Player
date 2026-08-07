@@ -1,5 +1,5 @@
 Known bugs:
--There is a delay when you change gifs
+First gif loads and runs one full cycle but does not load up next gif
 
 Future version additions:
 -A drop down menu from above that will have buttons to change how gifs are played
@@ -8,3 +8,18 @@ Future version additions:
     -Display current gif name label
 -Drop down menu
     -pause, play, next, and reverse buttons
+-Gif follows temp of song
+-Implement some logic to display the gif name that is at fault under _load_gif()
+-The AnimatedGIF class should exist as a Singleton to wipe any latent data, If I want to load up another playlist,
+I want to ensure there aren't any weird bugs that arise like gif's being on top of each other or something.
+
+Ponderings:
+should the class be able to take both a list and a str as a possible attribute then process it internally,
+This would mean that I need to have seperate logic for processing the gifs one after another. Will that logic need to be
+incorperated into each class function or can I get away with just having maybe one or two additional function?
+
+
+-Load_gif() would need to get called for each gif that is being loaded: that's easy
+-next_frame() will need some kind of logic toggle.
+-change_gif() may be able to be used here
+-
